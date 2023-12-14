@@ -4,6 +4,7 @@
 const express = require("express");
 const path = require("path");
 const mongoose = require("mongoose");
+const engine = require("ejs-mate");
 const methodOverride = require("method-override");
 
 // Campground Model
@@ -21,7 +22,10 @@ const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", () => console.log("Database connected"));
 
-// Set View Engine to EJS
+// Set EJS Engine
+app.engine("ejs", engine);
+
+// Set View Engine to EJS Mate instead of the default EJS
 app.set("view engine", "ejs");
 
 // Set an absolute path to the views directory

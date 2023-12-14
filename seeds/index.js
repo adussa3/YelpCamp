@@ -29,16 +29,20 @@ const generateCampground = () => {
     const city = getRandomElement(cities);
     const descriptor = getRandomElement(descriptors);
     const place = getRandomElement(places);
+    const price = Math.floor(Math.random() * 20) + 10;
 
     const campground = {
         title: `${descriptor} ${place}`,
-        location: `${city.city}, ${city.state}`
+        location: `${city.city}, ${city.state}`,
+        image: "https://source.unsplash.com/collection/483251",
+        description: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Cupiditate dolor dicta reprehenderit, rem qui eligendi, repellendus voluptatem autem in similique vel perspiciatis culpa consequuntur aliquid, quae tempora quisquam maxime consectetur!",
+        price
     }
 
     return campground;
 }
 
-const addCampgroundSeedData = async (numOfCamps = 10) => {
+const addCampgroundSeedData = async (numOfCamps = 100) => {
     // Delete the exisiting campgrounds in the Mongo Database
     await Campground.deleteMany({});
 
