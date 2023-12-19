@@ -10,6 +10,15 @@ const methodOverride = require("method-override");
 // Campground Model
 const Campground = require("./models/campground");
 
+// catchAsync Function
+const catchAsync = require("./utils/catchAsync");
+
+// ExpressError Class
+const ExpressError = require("./utils/ExpressError");
+
+// campgroundSchema
+const { campgroundSchema } = require("./schemas");
+
 /***** Set up *****/
 
 // Create Express application
@@ -22,10 +31,10 @@ const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", () => console.log("Database connected"));
 
-// Set EJS Engine
+// Set the EJS Engine to EJS MATE instead of the default EJS
 app.engine("ejs", engine);
 
-// Set View Engine to EJS Mate instead of the default EJS
+// Set View Engine to EJS
 app.set("view engine", "ejs");
 
 // Set an absolute path to the views directory
@@ -39,7 +48,21 @@ app.use(methodOverride("_method"));
 
 /***** Routing *****/
 
-//// GET Requests
+//// VALIDATION ////
+
+// Validate the campground in request
+const validateCampground = (req, res, next) => {
+    // Use the schema to validate the request body
+    const { error } = campgroundSchema.validate(req.body);
+    if (error) {
+        const msg = error.details.map(el => el.message).join(",");
+        throw new ExpressError(msg, 400);
+    } else {
+        next();
+    }
+}
+
+//// GET Requests ////
 
 // Home
 app.get("/", (req, res) => {
@@ -47,10 +70,10 @@ app.get("/", (req, res) => {
 });
 
 // All Campgrounds
-app.get("/campgrounds", async (req, res) => {
+app.get("/campgrounds", catchAsync(async (req, res, next) => {
     const campgrounds = await Campground.find({});
     res.render("campgrounds/index", { campgrounds })
-});
+}));
 
 // Add Campground Form
 app.get("/campgrounds/new", (req, res) => {
@@ -58,44 +81,63 @@ app.get("/campgrounds/new", (req, res) => {
 });
 
 // Campground Details
-app.get("/campgrounds/:id", async (req, res) => {
+app.get("/campgrounds/:id", catchAsync(async (req, res, next) => {
     const id = req.params.id;
     const campground = await Campground.findById(id);
     res.render("campgrounds/show", { campground });
-});
+}));
 
 // Campground Edit Form
-app.get("/campgrounds/:id/edit", async (req, res) => {
+app.get("/campgrounds/:id/edit", catchAsync(async (req, res, next) => {
     const id = req.params.id;
     const campground = await Campground.findById(id);
     res.render("campgrounds/edit", { campground });
-});
+}));
 
-///// POST Requests
+///// POST Requests ////
 
 // Add Campground to Mongo Database
-app.post("/campgrounds", async (req, res) => {
+app.post("/campgrounds", validateCampground, catchAsync(async (req, res, next) => {
     const campground = new Campground(req.body.campground);
     await campground.save();
     res.redirect(`/campgrounds/${campground._id}`);
-});
+}));
 
-//// PUT Requests
+//// PUT Requests ////
 
 // Update Campground
-app.put("/campgrounds/:id", async (req, res) => {
+app.put("/campgrounds/:id", validateCampground, catchAsync(async (req, res, next) => {
     const id = req.params.id;
     const campground = await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
     res.redirect(`/campgrounds/${campground._id}`);
-});
+}));
 
-//// DELETE Requests
+//// DELETE ////
 
 // Delete Campground
-app.delete("/campgrounds/:id", async (req, res) => {
+app.delete("/campgrounds/:id", catchAsync(async (req, res, next) => {
     const id = req.params.id;
     const campground = await Campground.findByIdAndDelete(id);
     res.redirect("/campgrounds");
+}));
+
+//// Error Handling Middleware ////
+
+// Link https://stackoverflow.com/questions/14125997/difference-between-app-all-and-app-use
+// app.all() attaches to the application's router
+// app.use() attaches to the application's main middleware stack
+//
+// if we reach app.all(), it throws an error which
+// will then be sent to the error handling middleware
+app.all("*", (req, res, next) => {
+    next(new ExpressError("Page Not Found", 404));
+})
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+    const { statusCode = 500 } = err;
+    if (!err.message) err.message = "Oh No, Something Went Wrong!";
+    res.status(statusCode).render("error", { err });
 });
 
 /***** Express Connection *****/
