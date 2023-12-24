@@ -5,6 +5,9 @@ const mongoose = require("mongoose");
 // We can use Schema, instead of fully typing out mongoose.Schema
 const Schema = mongoose.Schema;
 
+// Import the Review Model
+const Review = require("./review");
+
 // Create the Campground Schema
 const campgroundSchema = new Schema({
     title: {
@@ -28,6 +31,20 @@ const campgroundSchema = new Schema({
     },
     longitude: {
         type: Number
+    },
+    reviews: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: "Review"
+        }
+    ]
+});
+
+// Deletes all the associated reviews when a Campground is deleted
+// NOTE: This get executed when Campground.findByIdAndDelete(id) is called in app.js
+campgroundSchema.post("findOneAndDelete", async function (doc) {
+    if (doc) {
+        await Review.deleteMany({ _id: { $in: doc.reviews } });
     }
 });
 
