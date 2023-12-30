@@ -6,21 +6,17 @@ const path = require("path");
 const mongoose = require("mongoose");
 const engine = require("ejs-mate");
 const methodOverride = require("method-override");
-
-// Campground Model
-const Campground = require("./models/campground");
-
-// Review Model
-const Review = require("./models/review");
-
-// catchAsync Function
-const catchAsync = require("./utils/catchAsync");
+const session = require("express-session");
+const flash = require("connect-flash");
 
 // ExpressError Class
 const ExpressError = require("./utils/ExpressError");
 
-// Get Joi Schemas
-const { campgroundSchema, reviewSchema } = require("./schemas");
+// Campground Routes
+const campgroundRoutes = require("./routes/campgrounds");
+
+// Review Routes
+const reviewRoutes = require("./routes/reviews");
 
 /***** Set up *****/
 
@@ -28,7 +24,7 @@ const { campgroundSchema, reviewSchema } = require("./schemas");
 const app = express();
 
 // Connect to a Mongo Database with Mongoose
-mongoose.connect("mongodb://localhost:27017/yelp-camp")
+mongoose.connect("mongodb://localhost:27017/yelp-camp");
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
@@ -49,115 +45,53 @@ app.use(express.urlencoded({ extended: true }));
 // Override POST requests with what "_method=..." is set to (PUT, PATCH, DELETE)
 app.use(methodOverride("_method"));
 
+// Serving Static Files - set absolute path to the public directory
+app.use(express.static(path.join(__dirname, "public")));
+
+// Define Session Options
+const sessionConfig = {
+    secret: "thisshouldbeabettersecret!",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        // the session cookie expires after 1 week (in terms of milliseconds)
+        expires: Date.now() + (7 * 24 * 60 * 60 * 1000),
+
+        // the maximum age a cookie can be is 1 week (in terms of milliseconds)
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+
+        // this prevents the cookie from being accessed by client-side scripts
+        // the browser will not reveal the cookie to a third party (extra security)
+        // NOTE: by default, it's automatically set to true
+        httpOnly: true
+    }
+}
+
+// Use session() for every HTTP Request
+app.use(session(sessionConfig));
+
+// Enable flash messages
+app.use(flash());
+
+// Update res.locals
+app.use((req, res, next) => {
+    res.locals.success = req.flash("success");
+    res.locals.error = req.flash("error");
+    next();
+});
+
 /***** Routing *****/
-
-//// VALIDATION ////
-
-// Validate the campground in request
-const validateCampground = (req, res, next) => {
-    // Use the campground schema to validate the request body
-    const { error } = campgroundSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(el => el.message).join(",");
-        throw new ExpressError(msg, 400);
-    } else {
-        next();
-    }
-}
-
-// Calidate the review in the request
-const validateReview = (req, res, next) => {
-    // Use the review schema to validate the request body
-    const { error } = reviewSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(el => el.message).join(",");
-        throw new ExpressError(msg, 400);
-    } else {
-        next();
-    }
-
-}
-
-//// GET Requests ////
 
 // Home
 app.get("/", (req, res) => {
     res.render("home");
 });
 
-// All Campgrounds
-app.get("/campgrounds", catchAsync(async (req, res) => {
-    const campgrounds = await Campground.find({});
-    res.render("campgrounds/index", { campgrounds })
-}));
+// Campground Express Router
+app.use("/campgrounds", campgroundRoutes);
 
-// Add Campground Form
-app.get("/campgrounds/new", (req, res) => {
-    res.render("campgrounds/new");
-});
-
-// Campground Details
-app.get("/campgrounds/:id", catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findById(id).populate("reviews");
-    console.log(campground);
-    res.render("campgrounds/show", { campground });
-}));
-
-// Campground Edit Form
-app.get("/campgrounds/:id/edit", catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findById(id);
-    res.render("campgrounds/edit", { campground });
-}));
-
-///// POST Requests ////
-
-// Add Campground to Mongo Database
-app.post("/campgrounds", validateCampground, catchAsync(async (req, res) => {
-    const campground = new Campground(req.body.campground);
-    await campground.save();
-    res.redirect(`/campgrounds/${campground._id}`);
-}));
-
-// Add a review to the Campground
-app.post("/campgrounds/:id/reviews", validateReview, catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findById(id);
-    const review = new Review(req.body.review);
-    campground.reviews.push(review);
-    await campground.save();
-    await review.save();
-    res.redirect(`/campgrounds/${campground._id}`);
-}));
-
-//// PUT Requests ////
-
-// Update Campground
-app.put("/campgrounds/:id", validateCampground, catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
-    res.redirect(`/campgrounds/${campground._id}`);
-}));
-
-//// DELETE ////
-
-// Delete Campground
-app.delete("/campgrounds/:id", catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findByIdAndDelete(id);
-    res.redirect("/campgrounds");
-}));
-
-// Delete a review from a campground
-app.delete("/campgrounds/:id/reviews/:reviewId", catchAsync(async (req, res) => {
-    const { id, reviewId } = req.params;
-
-    // $pull pulls out the review using the reviewId from the campground's reviews array
-    const campground = await Campground.findByIdAndUpdate(id, { $pull: { reviews: reviewId } })
-    await Review.findByIdAndDelete(reviewId);
-    res.redirect(`/campgrounds/${campground._id}`);
-}));
+// Review Express Router
+app.use("/campgrounds/:id/reviews", reviewRoutes);
 
 //// Error Handling Middleware ////
 
