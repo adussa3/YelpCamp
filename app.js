@@ -8,6 +8,8 @@ const engine = require("ejs-mate");
 const methodOverride = require("method-override");
 const session = require("express-session");
 const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStategy = require("passport-local");
 
 // ExpressError Class
 const ExpressError = require("./utils/ExpressError");
@@ -17,6 +19,12 @@ const campgroundRoutes = require("./routes/campgrounds");
 
 // Review Routes
 const reviewRoutes = require("./routes/reviews");
+
+// User Routes
+const userRoutes = require("./routes/users");
+
+// User Model
+const User = require("./models/user");
 
 /***** Set up *****/
 
@@ -73,8 +81,36 @@ app.use(session(sessionConfig));
 // Enable flash messages
 app.use(flash());
 
+// Initialize Passport
+app.use(passport.initialize());
+
+// Enable Persistent Login Sessions
+// NOTE: app.use(session(...)) should occur BEFORE this! 
+app.use(passport.session());
+
+// Passport uses the LocalStategy
+// The LocalStategy uses the authentication method in the User model
+passport.use(new LocalStategy(User.authenticate()));
+
+// This tells passport how to serialize a user
+// Serialization refers to how to store a user in a session
+passport.serializeUser(User.serializeUser());
+
+// This tells passport how to deserialize a user
+// Deserialize refers to how to get a user (unstore) out of a session
+passport.deserializeUser(User.deserializeUser());
+
 // Update res.locals
 app.use((req, res, next) => {
+    console.log(req.session);
+    // res.locals are global and can be accessed by all views template
+
+    // NOTE: req.user is an object that contains information of the logged in user (or undefined if signed out)
+    //       we don't have to look in the session to get the user, we can directly call it from request
+    //
+    //       res.user is added by passport, and it is automatically filled in with the deserialized information from the session
+    //       so the session stores the serialized information and passport deserializes the session and fill in req.user with that data
+    res.locals.currentUser = req.user;
     res.locals.success = req.flash("success");
     res.locals.error = req.flash("error");
     next();
@@ -87,13 +123,27 @@ app.get("/", (req, res) => {
     res.render("home");
 });
 
+app.get("/fakeUser", async (req, res) => {
+    const user = new User({
+        email: "siddu@mail.com",
+        username: "siddu",
+    });
+
+    // This check if the username is unique and hashed the password
+    const registeredUser = await User.register(user, "MyPassword!");
+    res.send(registeredUser);
+});
+
 // Campground Express Router
 app.use("/campgrounds", campgroundRoutes);
 
 // Review Express Router
 app.use("/campgrounds/:id/reviews", reviewRoutes);
 
-//// Error Handling Middleware ////
+// User Express Router
+app.use("/", userRoutes);
+
+/***** Error Handling *****/
 
 // Link https://stackoverflow.com/questions/14125997/difference-between-app-all-and-app-use
 // app.all() attaches to the application's router
