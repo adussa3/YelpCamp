@@ -4,9 +4,6 @@
 const express = require("express");
 const passport = require("passport");
 
-// User Model
-const User = require("../models/user");
-
 // Create a new Router Object
 const router = express.Router();
 
@@ -16,42 +13,20 @@ const catchAsync = require("../utils/catchAsync");
 // storeReturnTo Middleware
 const { storeReturnTo } = require("../middleware");
 
-/***** GET Requests *****/
+// User Controller
+const users = require("../controllers/users");
 
-// Register a new account Form
-router.get("/register", (req, res) => {
-    res.render("users/register");
-});
+/***** Routes *****/
+
+// NOTE: you can instead of having individual routes, you can group routes together if they have the same path using router.route()
+//       route.route(:path) takes in a path, and you can append the http methods/verbs/actions to it
+
+router.route("/register")
+    .get(users.renderRegister) // Register a new account Form
+    .post(catchAsync(users.register)) // Add a new account to the Mongo Database
 
 // Login Form
-router.get("/login", (req, res) => {
-    res.render("users/login");
-});
-
-/***** POST Requests *****/
-
-// Add a new account to the Mongo Database
-router.post("/register", catchAsync(async (req, res, next) => {
-    try {
-        const { username, email, password } = req.body;
-        const user = new User({ username, email });
-        const registeredUser = await User.register(user, password);
-
-        // req.login() and req.logout() are passport helper methods that is automatically added to the request object
-        // req.login() establishes a login session (actually logs the user in when registered)
-        req.login(registeredUser, err => {
-            if (err) return next(err);
-
-            // NOTE: req.login() does NOT return a promise so you cannot use the await keyword
-            //       so req.flash and res.redirect need to be inside the callback function
-            req.flash("success", "Welcome to Yelp Camp!");
-            res.redirect("campgrounds");
-        });
-    } catch (e) {
-        req.flash("error", e.message);
-        res.redirect("/register");
-    }
-}));
+router.get("/login", users.renderLogin);
 
 // Log in User
 //
@@ -64,27 +39,12 @@ router.post("/register", catchAsync(async (req, res, next) => {
 //       their account, they are returned back to the last page that they were on
 //
 // NOTE: passport.authenticate() is a middleware that authenticates a request
-//       it takes in a stategy and check if the request follows the guidlines
+//       it takes in a stategy and check if the request follows the guidelines
 //       options: (1) failureFlash - creates a flash message (2) failureRedirect - redirect to "/login" on a failure
-router.post("/login", storeReturnTo, passport.authenticate("local", { failureFlash: true, failureRedirect: "/login" }), (req, res) => {
-    req.flash("success", "welcome back!");
-    const redirectUrl = res.locals.returnTo || "campgrounds";
-    res.redirect(redirectUrl);
-});
+router.post("/login", storeReturnTo, passport.authenticate("local", { failureFlash: true, failureRedirect: "/login" }), users.login);
 
 // Logout
-router.post("/logout", (req, res, next) => {
-    // req.login() and req.logout() are passport helper methods that is automatically added to the request object
-    // req.logout() terminates a login session
-    req.logout(function (err) {
-        if (err) return next(err);
-
-        // NOTE: req.logout() does NOT return a promise so you cannot use the await keyword
-        //       so req.flash and res.redirect need to be inside the callback function
-        req.flash("success", "Goodbye!");
-        res.redirect("/campgrounds");
-    });
-});
+router.post("/logout", users.logout);
 
 /***** Export *****/
 
