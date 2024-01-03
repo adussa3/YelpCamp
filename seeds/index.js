@@ -32,11 +32,12 @@ const generateCampground = () => {
     const price = Math.floor(Math.random() * 20) + 10;
 
     const campground = {
+        author: "65934d4416aefc5d7754a57e",
         title: `${descriptor} ${place}`,
         location: `${city.city}, ${city.state}`,
         image: "https://source.unsplash.com/collection/483251",
         description: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Cupiditate dolor dicta reprehenderit, rem qui eligendi, repellendus voluptatem autem in similique vel perspiciatis culpa consequuntur aliquid, quae tempora quisquam maxime consectetur!",
-        price
+        price,
     }
 
     return campground;

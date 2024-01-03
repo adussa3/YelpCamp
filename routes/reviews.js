@@ -3,9 +3,6 @@
 // Express NPM Package
 const express = require("express");
 
-// ExpressError Class
-const ExpressError = require("../utils/ExpressError");
-
 // catchAsync Function
 const catchAsync = require("../utils/catchAsync");
 
@@ -15,8 +12,8 @@ const Campground = require("../models/campground");
 // Review Model
 const Review = require("../models/review");
 
-// Review Joi Schema
-const { reviewSchema } = require("../schemas");
+// isLoggedIn, validateReview, and isReviewAuthor Middleware Functions
+const { isLoggedIn, validateReview, isReviewAuthor } = require("../middleware");
 
 // Create a new Router Object
 // NOTE: Express Router likes to keep :id seperate so it doesn't get passed into reviews.js
@@ -24,27 +21,14 @@ const { reviewSchema } = require("../schemas");
 //       This merges the params in app.js with the params in reviews.js
 const router = express.Router({ mergeParams: true });
 
-/***** VALIDATION *****/
-
-// Validate the review in the request
-const validateReview = (req, res, next) => {
-    // Use the review schema to validate the request body
-    const { error } = reviewSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(el => el.message).join(",");
-        throw new ExpressError(msg, 400);
-    } else {
-        next();
-    }
-}
-
 /***** POST Requests *****/
 
 // Add a review to the Campground
-router.post("/", validateReview, catchAsync(async (req, res) => {
+router.post("/", isLoggedIn, validateReview, catchAsync(async (req, res) => {
     const id = req.params.id;
     const campground = await Campground.findById(id);
     const review = new Review(req.body.review);
+    review.author = req.user._id;
     campground.reviews.push(review);
     await campground.save();
     await review.save();
@@ -55,7 +39,7 @@ router.post("/", validateReview, catchAsync(async (req, res) => {
 /***** DELETE Requests *****/
 
 // Delete the selected Review from its associated Campground
-router.delete("/:reviewId", catchAsync(async (req, res) => {
+router.delete("/:reviewId", isLoggedIn, isReviewAuthor, catchAsync(async (req, res) => {
     const { id, reviewId } = req.params;
 
     // $pull pulls out the review using the reviewId from the campground's reviews array

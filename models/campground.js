@@ -32,6 +32,10 @@ const campgroundSchema = new Schema({
     longitude: {
         type: Number
     },
+    author: {
+        type: Schema.Types.ObjectId,
+        ref: "User"
+    },
     reviews: [
         {
             type: Schema.Types.ObjectId,

@@ -102,7 +102,8 @@ passport.deserializeUser(User.deserializeUser());
 
 // Update res.locals
 app.use((req, res, next) => {
-    console.log(req.session);
+    // console.log(req.session);
+
     // res.locals are global and can be accessed by all views template
 
     // NOTE: req.user is an object that contains information of the logged in user (or undefined if signed out)

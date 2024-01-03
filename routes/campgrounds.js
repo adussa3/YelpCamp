@@ -3,37 +3,17 @@
 // Express NPM Package
 const express = require("express");
 
-// ExpressError Class
-const ExpressError = require("../utils/ExpressError");
-
 // catchAsync Function
 const catchAsync = require("../utils/catchAsync");
 
 // Campground Model
 const Campground = require("../models/campground");
 
-// Campground Joi Schema
-const { campgroundSchema } = require("../schemas");
-
-// isLoggedIn Middleware Function
-const { isLoggedIn } = require("../middleware");
+// isLoggedIn, validateCampground, and isAuthor Middleware Functions
+const { isLoggedIn, validateCampground, isAuthor } = require("../middleware");
 
 // Create a new Router Object
 const router = express.Router();
-
-/***** VALIDATION *****/
-
-// Validate the campground in the request
-const validateCampground = (req, res, next) => {
-    // Use the campground schema to validate the request body
-    const { error } = campgroundSchema.validate(req.body);
-    if (error) {
-        const msg = error.details.map(el => el.message).join(",");
-        throw new ExpressError(msg, 400);
-    } else {
-        next();
-    }
-}
 
 /***** GET Requests *****/
 
@@ -50,8 +30,14 @@ router.get("/new", isLoggedIn, (req, res) => {
 
 // Campground Details
 router.get("/:id", catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findById(id).populate("reviews");
+    const { id } = req.params;
+
+    // This populates the author in each review, and separately populates the review and author in each campground
+    const campground = await Campground.findById(id).populate({
+        path: "reviews",
+        populate: { path: "author" }
+    }).populate("author");
+
     if (!campground) {
         req.flash("error", "Cannot find that campground!");
         return res.redirect("/campgrounds");
@@ -60,8 +46,8 @@ router.get("/:id", catchAsync(async (req, res) => {
 }));
 
 // Campground Edit Form
-router.get("/:id/edit", isLoggedIn, catchAsync(async (req, res) => {
-    const id = req.params.id;
+router.get("/:id/edit", isLoggedIn, isAuthor, catchAsync(async (req, res) => {
+    const { id } = req.params;
     const campground = await Campground.findById(id);
     if (!campground) {
         req.flash("error", "Cannot find that campground!");
@@ -75,6 +61,9 @@ router.get("/:id/edit", isLoggedIn, catchAsync(async (req, res) => {
 // Add Campground to the Mongo Database
 router.post("/", isLoggedIn, validateCampground, catchAsync(async (req, res) => {
     const campground = new Campground(req.body.campground);
+
+    // RECALL: req.user is added by passport. It represents the logged in user
+    campground.author = req.user._id;
     await campground.save();
     req.flash("success", "Successfully made a new campground!");
     res.redirect(`/campgrounds/${campground._id}`);
@@ -83,19 +72,19 @@ router.post("/", isLoggedIn, validateCampground, catchAsync(async (req, res) => 
 /***** PUT Requests *****/
 
 // Update Campground
-router.put("/:id", isLoggedIn, validateCampground, catchAsync(async (req, res) => {
-    const id = req.params.id;
+router.put("/:id", isLoggedIn, isAuthor, validateCampground, catchAsync(async (req, res) => {
+    const { id } = req.params;
     const campground = await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
     req.flash("success", "Successfully updated campground");
-    res.redirect(`/campgrounds/${campground._id}`);
+    return res.redirect(`/campgrounds/${campground._id}`);
 }));
 
 /***** DELETE Requests *****/
 
 // Delete Campground
-router.delete("/:id", isLoggedIn, catchAsync(async (req, res) => {
-    const id = req.params.id;
-    const campground = await Campground.findByIdAndDelete(id);
+router.delete("/:id", isLoggedIn, isAuthor, catchAsync(async (req, res) => {
+    const { id } = req.params;
+    await Campground.findByIdAndDelete(id);
     req.flash("success", "Successfully deleted campground");
     res.redirect("/campgrounds");
 }));
