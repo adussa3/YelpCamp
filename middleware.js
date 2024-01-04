@@ -90,6 +90,14 @@ module.exports.validateCampground = (req, res, next) => {
 
 // Validate the review in the request
 module.exports.validateReview = (req, res, next) => {
+    // Show an client-side error flash message if review.rating is set to 0
+    const { review } = req.body;
+    if (review.rating == 0) {
+        const { id } = req.params;
+        req.flash("error", "Please select a star rating");
+        return res.redirect(`/campgrounds/${id}`);
+    }
+
     // Use the review schema to validate the request body
     const { error } = reviewSchema.validate(req.body);
     if (error) {
