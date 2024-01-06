@@ -35,9 +35,18 @@ const generateCampground = () => {
         author: "65934d4416aefc5d7754a57e",
         title: `${descriptor} ${place}`,
         location: `${city.city}, ${city.state}`,
-        image: "https://source.unsplash.com/collection/483251",
+        images: [
+            {
+                url: "https://res.cloudinary.com/djkacdqvc/image/upload/v1704410793/YelpCamp/vt9n47z3u7hfkrolx4nb.jpg",
+                filename: "YelpCamp/vt9n47z3u7hfkrolx4nb"
+            },
+            {
+                url: "https://res.cloudinary.com/djkacdqvc/image/upload/v1704410793/YelpCamp/xe39vlhy81sxpicwfavr.jpg",
+                filename: "YelpCamp/xe39vlhy81sxpicwfavr"
+            }
+        ],
         description: "Lorem ipsum dolor sit amet consectetur adipisicing elit. Cupiditate dolor dicta reprehenderit, rem qui eligendi, repellendus voluptatem autem in similique vel perspiciatis culpa consequuntur aliquid, quae tempora quisquam maxime consectetur!",
-        price,
+        price
     }
 
     return campground;

@@ -2,7 +2,13 @@
 <div class="row">
     <h1 class="text-center">Edit Campground</h1>
     <div class="col-6 offset-3">
-        <form class="validated-form" action="/campgrounds/<%= campground._id %>?_method=PUT" method="POST" novalidate>
+        <!-- By default, the HTML form ectype (encoded type) is application/x-www-form-urlencoded
+             (this is what we expect the form data to look like)
+
+             In order to submit images, we need to set entype to multipart/form-data
+             to parse multipart/form-data, we need to use the Multer middleware
+             Multer is primarily used for uploading files -->
+        <form class="validated-form" action="/campgrounds/<%= campground._id %>?_method=PUT" method="POST" novalidate enctype="multipart/form-data">
             <div class="mb-3">
                 <label class="form-label" for="title">Title</label>
                 <input type="text" class="form-control" name="campground[title]" id="title" value="<%= campground.title %>" required>
@@ -13,13 +19,6 @@
             <div class="mb-3">
                 <label class="form-label" for="location">Location (City, State)</label>
                 <input type="text" class="form-control" name="campground[location]" id="location" value="<%= campground.location %>" required>
-                <div class="valid-feedback">
-                    Looks good!
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label" for="image">Image Url</label>
-                <input type="text" class="form-control" name="campground[image]" id="image" value="<%= campground.image %>" required>
                 <div class="valid-feedback">
                     Looks good!
                 </div>
@@ -42,31 +41,28 @@
                 </div>
             </div>
             <div class="mb-3">
+                <label class="form-label" for="image">Add Images</label>
+                <!-- The attribute "multiple" allows you to upload multiple files -->
+                <input type="file" class="form-control" name="image" id="image" multiple>
+            </div>
+            <div class="d-flex flex-wrap justify-content-evenly ">
+                <% campground.images.forEach((image, index) => { %>
+                    <span class="campground-image position-relative mb-3">
+                        <img class="rounded" src="<%= image.thumbnail %>" alt="">
+                        <span class="position-absolute badge top-0 end-0 bg-danger border border-dark" style="border-top-left-radius: 0; border-bottom-right-radius: 0;">
+                            <span class="d-flex align-items-center">
+                                <label for="image-<%= index %>">Delete:&nbsp;</label>
+                                <!-- all checkboxes that are checked add the image.filename value in deleteImages[] (it's an array when we parse the body) -->
+                                <input type="checkbox" id="image-<%= index %>" name="deleteImages[]" value="<%= image.filename %>" />
+                            </span>
+                        </span>
+                    </span>
+                <% }); %>
+            </div>
+            <div class="mb-3">
                 <button class="btn btn-info">Update Campground</button>
             </div>
         </form>
         <a href="/campgrounds/<%= campground._id %>">Back to Campground</a>
     </div>
 </div>
-
-<script>
-    // Example starter JavaScript for disabling form submissions if there are invalid fields
-(() => {
-  'use strict'
-
-  // Fetch all the forms we want to apply custom Bootstrap validation styles to
-  const forms = document.querySelectorAll('.validated-form')
-
-  // Loop over them and prevent submission
-  Array.from(forms).forEach(form => {
-    form.addEventListener('submit', event => {
-      if (!form.checkValidity()) {
-        event.preventDefault()
-        event.stopPropagation()
-      }
-
-      form.classList.add('was-validated')
-    }, false)
-  })
-})()
-</script>

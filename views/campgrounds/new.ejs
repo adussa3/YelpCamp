@@ -2,7 +2,14 @@
 <div class="row">
     <h1 class="text-center">New Campground</h1>
     <div class="col-6 offset-3">
-        <form class="validated-form" action="/campgrounds" method="POST" novalidate>
+
+        <!-- By default, the HTML form ectype (encoded type) is application/x-www-form-urlencoded
+             (this is what we expect the form data to look like)
+
+             In order to submit images, we need to set entype to multipart/form-data
+             to parse multipart/form-data, we need to use the Multer middleware
+             Multer is primarily used for uploading files -->
+        <form class="validated-form" action="/campgrounds" method="POST" novalidate enctype="multipart/form-data">
             <div class="mb-3">
                 <label class="form-label" for="title">Title</label>
                 <input type="text" class="form-control" name="campground[title]" id="title" required>
@@ -18,11 +25,9 @@
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label" for="image">Image Url</label>
-                <input type="text" class="form-control" name="campground[image]" id="image" required>
-                <div class="valid-feedback">
-                    Looks good!
-                </div>
+                <label class="form-label" for="image">Add Images</label>
+                <!-- The attribute "multiple" allows you to upload multiple files -->
+                <input type="file" class="form-control" name="image" id="image" multiple required>
             </div>
             <div class="mb-3">
                 <label class="form-label" for="price">Campground Price (per night)</label>

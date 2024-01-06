@@ -1,3 +1,17 @@
+/****** Setting *****/
+// process.env.NODE_ENV is an environment variable that is usually just "development" or "production"
+// NOTE: prior to this, we've been running in development this whole time, but when we deploy this code,
+//       it will be in production
+//
+// If we're running in development mode, then we're requiring the dotenv NPM Package which takes the variables
+// defined in .env and add them into process.env in the node app
+// 
+// NOTE: we don't do this in production! There's another way we store environment variables where we don't store
+// them in a file. Instead, we would add them into the environment
+if (process.env.NODE_ENV !== "production") {
+    require("dotenv").config();
+}
+
 /***** Imports *****/
 
 // NPM Packages
