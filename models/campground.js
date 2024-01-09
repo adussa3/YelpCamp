@@ -34,6 +34,22 @@ const campgroundSchema = new Schema({
         type: String
     },
     images: [imageSchema],
+    // MongoDB supports GeoJSON functionality
+    // You need to use this GeoJSON pattern
+    // Mapbox also works with GeoJSON which allows them to work together without to convert between each other
+    //
+    // NOTE: originally this was set to "required", but it's possible for the user to set a location that cannot
+    // be geocoded by mapbox!
+    geometry: {
+        type: {
+            type: String,
+            enum: ["Point"]
+        },
+        coordinates: {
+            type: [Number],
+            required: true
+        }
+    },
     price: {
         type: Number,
         min: 0

@@ -1,4 +1,13 @@
 <% layout("layouts/boilerplate") %>
+
+<!-- NOTE: we're serving static files in app.js, this is automatically inside the "public" directory -->
+
+<!-- Starability -->
+<link rel="stylesheet" type="text/css" href="/css/starability-basic.css"/>
+
+<!-- Mapbox Styling -->
+<link rel="stylesheet" href="/css/map.css">
+
 <div class="row">
     <div class="col-6">
         <div class="card mb-3">
@@ -45,6 +54,23 @@
     </div>
 
     <div class="col-6">
+        <div id='map' style='height: 300px;'></div>
+        <div id="menu" class="mb-3">
+
+            <input id="satellite-streets-v12" type="radio" name="rtoggle" value="satellite">
+            <!-- See a list of Mapbox-hosted public styles at -->
+            <!-- https://docs.mapbox.com/api/maps/styles/#mapbox-styles -->
+            <label for="satellite-streets-v12">satellite streets</label>
+            <input id="light-v11" type="radio" name="rtoggle" value="light">
+            <label for="light-v11">light</label>
+            <input id="dark-v11" type="radio" name="rtoggle" value="dark">
+            <label for="dark-v11">dark</label>
+            <input id="streets-v12" type="radio" name="rtoggle" value="streets" checked="checked">
+            <label for="streets-v12">streets</label>
+            <input id="outdoors-v12" type="radio" name="rtoggle" value="outdoors">
+            <label for="outdoors-v12">outdoors</label>
+        </div>
+
         <% if (currentUser) { %>
             <h2>Leave a Review</h2>
             <form class="validated-form mb-3" action="/campgrounds/<%= campground._id %>/reviews" method="POST" novalidate>
@@ -97,3 +123,22 @@
         <% } %>
     </div>
 </div>
+
+<!-- NOTE: you can't directly use the EJS access token: "<%- process.env.MAPBOX_TOKEN %>"  
+     EJS doesn't go through and process the scripts! It doesn't think that there's any EJS syntax
+     and leaves it alone, and let's the browser handle it (but it doesn't make any sense to the browser)
+    
+     to solve this, you need to get the access token from the EJS file to the JavaScript file!
+     we defined a "mapToken" variable and we can directly call that variable inside of showPageMap.js
+
+     likewise, we need to do the same for campground so that the JavaScript file has access to it
+     note that, we need to call JSON.stringify because the campground's String fields don't have quotes
+     which causes errors! JSON.stringify formats campground so that its string fields have quotes
+-->
+<% if (campground.geometry) { %>
+    <script>
+        const mapToken = "<%- process.env.MAPBOX_TOKEN %>";
+        const campground = <%- JSON.stringify(campground) %>
+    </script>
+    <script src="/js/showPageMap.js"></script>
+<% } %>

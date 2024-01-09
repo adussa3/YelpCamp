@@ -6,6 +6,15 @@ const Campground = require("../models/campground");
 // Cloudinary
 const { cloudinary } = require("../cloudinary");
 
+// Mapbox
+const mapboxGeocoding = require("@mapbox/mapbox-sdk/services/geocoding");
+
+// Mapbox Public Token
+const mapboxToken = process.env.MAPBOX_TOKEN;
+
+// Mapbox Geocoding Instance
+const geocoder = mapboxGeocoding({ accessToken: mapboxToken });
+
 /***** Campground Middleware Functions *****/
 
 // All Campgrounds
@@ -23,6 +32,17 @@ module.exports.renderNewForm = (req, res) => {
 module.exports.createCampground = async (req, res) => {
     const campground = new Campground(req.body.campground);
 
+    // campground.geometry stores the longitude and latitude and coordinate points
+    // NOTE: this a Mapbox function that give us a list of possible locations
+    // and their data based on the campground's location
+    const geoData = await geocoder.forwardGeocode({
+        query: campground.location, // we input the campground's location
+        limit: 1 // we limit the output to 1 result
+    }).send();
+
+    // we set the campground's geometry to the 1 result from geoData
+    campground.geometry = geoData.body.features[0].geometry;
+
     // RECALL: req.user is added by passport. It represents the logged in user
     campground.author = req.user._id;
 
@@ -31,8 +51,6 @@ module.exports.createCampground = async (req, res) => {
     campground.images = req.files.map(file => ({ url: file.path, filename: file.filename }));
 
     await campground.save();
-
-    console.log(campground);
 
     req.flash("success", "Successfully made a new campground!");
     res.redirect(`/campgrounds/${campground._id}`);
