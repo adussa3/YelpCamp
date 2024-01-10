@@ -40,6 +40,12 @@ const campgroundSchema = new Schema({
     //
     // NOTE: originally this was set to "required", but it's possible for the user to set a location that cannot
     // be geocoded by mapbox!
+    //
+    // NOTE: By default, Mongoose does not include virtuals when you convert a document to JSON.
+    //       For example, if you pass a document to Express' res.json() function, virtuals will 
+    //       not be included by default.
+    //
+    //       To include virtuals in res.json(), you need to set the toJSON schema option to { virtuals: true }.
     geometry: {
         type: {
             type: String,
@@ -76,6 +82,20 @@ const campgroundSchema = new Schema({
             ref: "Review"
         }
     ]
+}, { toJSON: { virtuals: true } });
+
+imageSchema.virtual("carousel").get(function () {
+    // the 'this' keyword refers to the individual image
+    // link: https://cloudinary.com/documentation/transformation_reference
+    return this.url.replace("/upload", "/upload/h_500,c_fill");
+});
+
+// We're nesting popUpMarkup in properties!
+// We can access this value by calling campground.properties.popUpMarkup
+campgroundSchema.virtual("properties.popUpMarkup").get(function () {
+    return `
+    <strong><a href="/campgrounds/${this._id}">${this.title}</a></strong>
+    <p>${this.description.substring(0, 20)}...</p>`;
 });
 
 // Deletes all the associated reviews when a Campground is deleted

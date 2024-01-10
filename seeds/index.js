@@ -80,7 +80,7 @@ const generateCampground = async () => {
     return campground;
 }
 
-const addCampgroundSeedData = async (numOfCamps = 100) => {
+const addCampgroundSeedData = async (numOfCamps = 400) => {
     // Delete the exisiting campgrounds in the Mongo Database
     await Campground.deleteMany({});
 
