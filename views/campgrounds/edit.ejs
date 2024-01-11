@@ -1,7 +1,7 @@
 <% layout("layouts/boilerplate") %>
 <div class="row">
     <h1 class="text-center">Edit Campground</h1>
-    <div class="col-6 offset-3">
+    <div class="col-md-6 offset-md-3">
         <!-- By default, the HTML form ectype (encoded type) is application/x-www-form-urlencoded
              (this is what we expect the form data to look like)
 
@@ -48,7 +48,7 @@
             <div class="d-flex flex-wrap justify-content-evenly ">
                 <% campground.images.forEach((image, index) => { %>
                     <span class="campground-image position-relative mb-3">
-                        <img class="rounded" src="<%= image.thumbnail %>" alt="">
+                        <img class="rounded border border-dark" src="<%= image.thumbnail %>" alt="">
                         <span class="position-absolute badge top-0 end-0 bg-danger border border-dark" style="border-top-left-radius: 0; border-bottom-right-radius: 0;">
                             <span class="d-flex align-items-center">
                                 <label for="image-<%= index %>">Delete:&nbsp;</label>

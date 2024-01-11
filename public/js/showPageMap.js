@@ -28,3 +28,6 @@ for (const input of inputs) {
         map.setStyle('mapbox://styles/mapbox/' + layerId);
     };
 }
+
+// Add zoom and rotation controls to the map.
+map.addControl(new mapboxgl.NavigationControl());

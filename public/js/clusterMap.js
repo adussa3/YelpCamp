@@ -1,14 +1,17 @@
 
 mapboxgl.accessToken = mapToken;
+
 const map = new mapboxgl.Map({
-    container: 'map',
+    container: 'cluster-map', // IMPORTANT: this is the id from index.ejs!
     // Choose from Mapbox's core styles, or make your own style with Mapbox Studio
-    style: 'mapbox://styles/mapbox/light-v11',
+    style: 'mapbox://styles/mapbox/streets-v12',
     center: [-103.5917, 40.6699],
     zoom: 3
 });
 
-map.on('load', () => {
+// 'style.load' maintains the mapbox's soures and layers (data persistence)
+// when the map style changes, this event listener re-adds the data to the map
+map.on('style.load', () => {
     // Add a new source from our GeoJSON data and
     // set the 'cluster' option to true. GL-JS will
     // add the point_count property to your source data.
@@ -127,3 +130,17 @@ map.on('load', () => {
         map.getCanvas().style.cursor = '';
     });
 });
+
+// Change map style based on the selected input
+const layerList = document.getElementById('menu');
+const inputs = layerList.getElementsByTagName('input');
+
+for (const input of inputs) {
+    input.onclick = (layer) => {
+        const layerId = layer.target.id;
+        map.setStyle('mapbox://styles/mapbox/' + layerId);
+    };
+}
+
+// Add zoom and rotation controls to the map.
+map.addControl(new mapboxgl.NavigationControl());
