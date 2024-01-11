@@ -12,7 +12,7 @@
                 <div class="carousel-inner rounded-top">  
                     <% campground.images.forEach((image, index) => { %>
                         <div class="carousel-item ratio ratio-16x9 <%= index === 0 ? "active" : "" %>">
-                            <img src="<%= image.carousel %>" class="overflow-hidden object-fit-cover">
+                            <img crossorigin="anonymous" src="<%= image.carousel %>" class="overflow-hidden object-fit-cover">
                           </div>
                     <% }) %>
                 </div>

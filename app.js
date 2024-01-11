@@ -25,6 +25,8 @@ const session = require("express-session");
 const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStategy = require("passport-local");
+const mongoSanitize = require('express-mongo-sanitize');
+const helmet = require("helmet");
 
 // ExpressError Class
 const ExpressError = require("./utils/ExpressError");
@@ -47,7 +49,9 @@ const User = require("./models/user");
 const app = express();
 
 // Connect to a Mongo Database with Mongoose
-mongoose.connect("mongodb://localhost:27017/yelp-camp");
+const localDatabase = "mongodb://localhost:27017/yelp-camp"
+const dbUrl = process.env.DB_URL;
+mongoose.connect(localDatabase);
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
@@ -71,12 +75,31 @@ app.use(methodOverride("_method"));
 // Serving Static Files - set absolute path to the public directory
 app.use(express.static(path.join(__dirname, "public")));
 
+// THIS PREVENTS MongoDB Operator Injection
+//
+// IMPORTANT: mongoSanitize searches for any keys in objects that begin with a $ sign or contain a .,
+//            from req.body, req.query or req.params.
+//
+// Object keys starting with a $ or containing a . are reserved for use by MongoDB as operators.
+// Without this sanitization, malicious users could send an object containing a $ operator,
+// or including a ., which could change the context of a database operation. Most notorious is 
+// the $where operator, which can execute arbitrary JavaScript on the database.
+//
+// The best way to prevent this is to sanitize the received data, and remove any offending keys,
+// or replace the characters with a 'safe' one.
+app.use(mongoSanitize());
+
 // Define Session Options
 const sessionConfig = {
     secret: "thisshouldbeabettersecret!",
     resave: false,
     saveUninitialized: true,
     cookie: {
+        // we can change the default name of our session (the default name is connect.sid)
+        // this adds an extra layer of security! People can write a script to grab the session ID
+        // from the browser and steal the session information and login
+        name: "session",
+
         // the session cookie expires after 1 week (in terms of milliseconds)
         expires: Date.now() + (7 * 24 * 60 * 60 * 1000),
 
@@ -85,8 +108,21 @@ const sessionConfig = {
 
         // this prevents the cookie from being accessed by client-side scripts
         // the browser will not reveal the cookie to a third party (extra security)
+        // in other words, it's not accessible by JavaScript
         // NOTE: by default, it's automatically set to true
-        httpOnly: true
+        httpOnly: true,
+
+        // setting secure to true breaks things in our localhost!
+        // basically, it says that this cookie should only work over HTTPS connections (NOT HTTP)
+        // we do want to set this to true when we deploy the app on a secure web host, so the
+        // cookies can only be configured over secure (HTTPS) connections
+        // 
+        // When true, the Secure attribute is set, otherwise it is not.
+        // By default, the Secure attribute is not set.
+        //
+        // Note be careful when setting this to true, as compliant clients will not send the cookie back
+        // to the server in the future if the browser does not have an HTTPS connection.
+        //secure: true
     }
 }
 
@@ -95,6 +131,66 @@ app.use(session(sessionConfig));
 
 // Enable flash messages
 app.use(flash());
+
+// Enable all 11 of Helmet's Middlwares
+// NOTE: The Content-Security-Policy (CSP) header mitigates a large number of attacks, such as cross-site scripting.
+// CSP is an extra layer of security that allows us to specify/restrict the locations we get our resources from
+// Basically we can specify a list of acceptable sources. We're designating our own policy and defining what's allowed and what's not allowed
+// Link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy#directives
+//
+// ex) When CSP is enabled, we can say:
+// (1) we're only allowed get images from unsplash
+// (2) we're only allowed to run scripts that come from only "this website"
+// (3) we're only allowed to get and request fonts from Google Fonts
+app.use(helmet());
+
+// we're restriciting the locations where we can get our resources from
+// if omeone tries to inject something, and there's a request going off to some other url that we didn't
+// define in helmet, then it gets blocked/is not allowed by the browser
+const scriptSrcUrls = [
+    "https://stackpath.bootstrapcdn.com/",
+    "https://api.tiles.mapbox.com/",
+    "https://api.mapbox.com/",
+    "https://kit.fontawesome.com/",
+    "https://cdnjs.cloudflare.com/",
+    "https://cdn.jsdelivr.net/",
+];
+const styleSrcUrls = [
+    "https://kit-free.fontawesome.com/",
+    "https://stackpath.bootstrapcdn.com/",
+    "https://api.mapbox.com/",
+    "https://api.tiles.mapbox.com/",
+    "https://fonts.googleapis.com/",
+    "https://use.fontawesome.com/",
+    "https://cdn.jsdelivr.net/",
+];
+const connectSrcUrls = [
+    "https://api.mapbox.com/",
+    "https://a.tiles.mapbox.com/",
+    "https://b.tiles.mapbox.com/",
+    "https://events.mapbox.com/",
+];
+const fontSrcUrls = [];
+app.use(
+    helmet.contentSecurityPolicy({
+        directives: {
+            defaultSrc: [],
+            connectSrc: ["'self'", ...connectSrcUrls],
+            scriptSrc: ["'unsafe-inline'", "'self'", ...scriptSrcUrls],
+            styleSrc: ["'self'", "'unsafe-inline'", ...styleSrcUrls],
+            workerSrc: ["'self'", "blob:"],
+            objectSrc: [],
+            imgSrc: [
+                "'self'",
+                "blob:",
+                "data:",
+                "https://res.cloudinary.com/djkacdqvc/", //SHOULD MATCH YOUR CLOUDINARY ACCOUNT! 
+                "https://images.unsplash.com/",
+            ],
+            fontSrc: ["'self'", ...fontSrcUrls],
+        },
+    })
+);
 
 // Initialize Passport
 app.use(passport.initialize());
