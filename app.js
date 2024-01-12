@@ -52,10 +52,10 @@ const app = express();
 // Connect to a Mongo Database with Mongoose
 
 // Local Database Link
-const dbUrl = "mongodb://localhost:27017/yelp-camp"
+// const dbUrl = "mongodb://localhost:27017/yelp-camp"
 
 // Mongo Database Link
-// const dbUrl = process.env.DB_URL;
+const dbUrl = process.env.DB_URL;
 
 mongoose.connect(dbUrl);
 
@@ -104,7 +104,7 @@ app.use(mongoSanitize());
 // Instead, we'll store express-session information in mongo!
 const store = MongoStore.create({
     mongoUrl: dbUrl,
-    secret: "thisshouldbeabettersecret!",
+    secret: process.env.SECRET,
     touchAfter: 24 * 60 * 60 // we don't want to resave all the session on the database every single time the user refreshes the page,
 });                          // we can lazy update the session, by limiting a period of time the session is updated after 24 hours elapsed (in seconds)
 
@@ -115,7 +115,7 @@ store.on("error", function (e) {
 // Define Session Options
 const sessionConfig = {
     store,
-    secret: "thisshouldbeabettersecret!",
+    secret: process.env.SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: {
