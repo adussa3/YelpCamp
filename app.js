@@ -27,6 +27,7 @@ const passport = require("passport");
 const LocalStategy = require("passport-local");
 const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require("helmet");
+const MongoStore = require("connect-mongo");
 
 // ExpressError Class
 const ExpressError = require("./utils/ExpressError");
@@ -49,9 +50,14 @@ const User = require("./models/user");
 const app = express();
 
 // Connect to a Mongo Database with Mongoose
-const localDatabase = "mongodb://localhost:27017/yelp-camp"
-const dbUrl = process.env.DB_URL;
-mongoose.connect(localDatabase);
+
+// Local Database Link
+const dbUrl = "mongodb://localhost:27017/yelp-camp"
+
+// Mongo Database Link
+// const dbUrl = process.env.DB_URL;
+
+mongoose.connect(dbUrl);
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
@@ -89,8 +95,26 @@ app.use(express.static(path.join(__dirname, "public")));
 // or replace the characters with a 'safe' one.
 app.use(mongoSanitize());
 
+// By default, the storage location for  express-session is the memory store
+// the memory store manages things in memory, which can be problematic because
+// it doesn't scale well, it can't hold very much information, and it's non-performant
+// it's ok for testing/in the development environment, but it should NOT be used in the 
+// production environment
+//
+// Instead, we'll store express-session information in mongo!
+const store = MongoStore.create({
+    mongoUrl: dbUrl,
+    secret: "thisshouldbeabettersecret!",
+    touchAfter: 24 * 60 * 60 // we don't want to resave all the session on the database every single time the user refreshes the page,
+});                          // we can lazy update the session, by limiting a period of time the session is updated after 24 hours elapsed (in seconds)
+
+store.on("error", function (e) {
+    console.log("SESSION STORE ERROR", e);
+});
+
 // Define Session Options
 const sessionConfig = {
+    store,
     secret: "thisshouldbeabettersecret!",
     resave: false,
     saveUninitialized: true,
