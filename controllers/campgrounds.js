@@ -1,5 +1,8 @@
 /***** Imports *****/
 
+// Fuse NPM Package
+const Fuse = require('fuse.js')
+
 // Campground Model
 const Campground = require("../models/campground");
 
@@ -19,8 +22,25 @@ const geocoder = mapboxGeocoding({ accessToken: mapboxToken });
 
 // All Campgrounds
 module.exports.index = async (req, res) => {
-    const campgrounds = await Campground.find({});
-    res.render("campgrounds/index", { campgrounds });
+    let campgrounds = await Campground.find({});
+
+    const { search: searchPattern } = req.query;
+    if (searchPattern) {
+        const fuseOptions = {
+            includeScore: true,
+            threshold: 0.4,
+            keys: ["title"]
+        }
+
+        const fuse = new Fuse(campgrounds, fuseOptions);
+        const filteredCampgrounds = await fuse.search(searchPattern);
+
+        // NOTE: fuse.search() puts all campgrounds inside of an item object
+        //       we need to get the campground inside of item
+        campgrounds = filteredCampgrounds.map(campground => campground.item);
+    }
+
+    res.render("campgrounds/index", { campgrounds, searchPattern });
 }
 
 // Add Campground Form
@@ -41,7 +61,7 @@ module.exports.createCampground = async (req, res) => {
     }).send();
 
     // we set the campground's geometry to the 1 result from geoData
-    campground.geometry = geoData.body.features[0].geometry;
+    if (geoData.body.features[0]) campground.geometry = geoData.body.features[0].geometry;
 
     // RECALL: req.user is added by passport. It represents the logged in user
     campground.author = req.user._id;
@@ -89,6 +109,21 @@ module.exports.renderEditForm = async (req, res) => {
 module.exports.updateCampground = async (req, res) => {
     const { id } = req.params;
     const campground = await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
+
+    // campground.geometry stores the longitude and latitude and coordinate points
+    // NOTE: this a Mapbox function that give us a list of possible locations
+    // and their data based on the campground's location
+    const geoData = await geocoder.forwardGeocode({
+        query: campground.location, // we input the campground's location
+        limit: 1 // we limit the output to 1 result
+    }).send();
+
+    // we set the campground's geometry to the 1 result from geoData
+    if (geoData.body.features[0]) {
+        campground.geometry = geoData.body.features[0].geometry;
+    } else {
+        campground.geometry.coordinates = [];
+    }
 
     // Concatenate the new image files into the exisiting campgrounds images
     const newImages = req.files.map(file => ({ url: file.path, filename: file.filename }));

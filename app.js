@@ -259,17 +259,6 @@ app.get("/", (req, res) => {
     res.render("home");
 });
 
-app.get("/fakeUser", async (req, res) => {
-    const user = new User({
-        email: "siddu@mail.com",
-        username: "siddu",
-    });
-
-    // This check if the username is unique and hashed the password
-    const registeredUser = await User.register(user, "MyPassword!");
-    res.send(registeredUser);
-});
-
 // Campground Express Router
 app.use("/campgrounds", campgroundRoutes);
 

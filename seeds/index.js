@@ -39,11 +39,18 @@ const geocoder = mapboxGeocoding({ accessToken: mapboxToken });
 /***** Set up *****/
 
 // Connect to a Mongo Database with Mongoose
-mongoose.connect("mongodb://localhost:27017/yelp-camp")
+
+// Local Database Link
+// const dbUrl = "mongodb://localhost:27017/yelp-camp"
+
+// Mongo Database Link
+const dbUrl = process.env.DB_URL;
+
+mongoose.connect(dbUrl);
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", () => console.log("Database connected"))
+db.once("open", () => console.log("Database connected"));
 
 /***** Insert initial Campground seed data *****/
 
@@ -56,7 +63,7 @@ const generateCampground = async () => {
     const price = Math.floor(Math.random() * 20) + 10;
 
     const campground = {
-        author: "65934d4416aefc5d7754a57e",
+        author: "65a1d1d32e6b963207ddb531",
         title: `${descriptor} ${place}`,
         location: `${cityInfo.city}, ${cityInfo.state}`,
         geometry: {
