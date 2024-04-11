@@ -55,6 +55,13 @@ const app = express();
 // const dbUrl = "mongodb://localhost:27017/yelp-camp"
 
 // Mongo Database Link
+/*
+    NOTE: if you get an error trying to connect to the Mongo Database,
+          you probably need to whitelist your current IP address:
+          (1) Log into https://account.mongodb.com/account/login
+          (2) Scroll down to "Network Access" on the left sidebar
+          (3) Add your current IP Address
+*/
 const dbUrl = process.env.DB_URL;
 
 mongoose.connect(dbUrl);
